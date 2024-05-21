@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/docker/docker/api/types/container"
@@ -11,9 +10,33 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/containers", getContainers)
+	// http.HandleFunc("/containers", getContainers)
+	// http.Handle("/", http.FileServer(http.Dir("./static")))
+	// log.Fatal(http.ListenAndServe(":8081", nil))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/containers", getContainers)
 	http.Handle("/", http.FileServer(http.Dir("./static")))
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	// Wrap the mux with the CORS middleware
+	handler := handleCORS(mux)
+
+	http.ListenAndServe(":8080", handler)
+}
+
+// Middleware to handle CORS
+func handleCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Handle preflight request
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func getContainers(w http.ResponseWriter, r *http.Request) {
