@@ -13,7 +13,7 @@ import (
 func main() {
 	http.HandleFunc("/containers", getContainers)
 	http.Handle("/", http.FileServer(http.Dir("./static")))
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8081", nil))
 }
 
 func getContainers(w http.ResponseWriter, r *http.Request) {
