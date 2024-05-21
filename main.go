@@ -19,7 +19,7 @@ func main() {
 	// Wrap the mux with the CORS middleware
 	handler := handleCORS(mux)
 
-	http.ListenAndServe(":8080", handler)
+	http.ListenAndServe(":8081", handler)
 }
 
 // Middleware to handle CORS
