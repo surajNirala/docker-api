@@ -15,7 +15,7 @@ func main() {
 	// log.Fatal(http.ListenAndServe(":8081", nil))
 	mux := http.NewServeMux()
 	mux.HandleFunc("/containers", getContainers)
-	http.Handle("/", http.FileServer(http.Dir("./static")))
+	mux.Handle("/", http.FileServer(http.Dir("./static")))
 	// Wrap the mux with the CORS middleware
 	handler := handleCORS(mux)
 
