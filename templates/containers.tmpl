@@ -29,12 +29,11 @@
                             <td>{{.Image}}</td>
                             <td>{{.State}}</td>
                             <td>
-                                {{ $baseURL := "139.59.5.74" }}
+                                {{ $baseURL := "/139.59.5.74" }}
                                 {{range .Ports}}
                                     {{ if eq .PublicPort 0 }}
                                         No public port assigned<br>
                                     {{ else }}
-                                    {{.PublicPort}}:{{.PrivatePort}}/{{.Type}}
                                         <a href="{{$baseURL}}:{{.PublicPort}}" target="_blank">{{.PublicPort}}:{{.PrivatePort}}</a><br>
                                     {{end}}
                                 {{end}}
