@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Docker Containers</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1 class="mt-5">Docker Containers</h1>
+                <p class="lead">List of Docker containers running on the server.</p>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Names</th>
+                            <th>Image</th>
+                            <th>State</th>
+                            <th>Port(s)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Containers}}
+                        <tr>
+                            <td>{{.ID}}</td>
+                            <td>{{range .Names}}{{.}} {{end}}</td>
+                            <td>{{.Image}}</td>
+                            <td>{{.State}}</td>
+                            <td>
+                                {{ $baseURL := "http://http://139.59.5.74" }}
+                                {{range .Ports}}
+                                    {{ if eq .PublicPort 0 }}
+                                        No public port assigned<br>
+                                    {{ else }}
+                                    {{.PublicPort}}:{{.PrivatePort}}/{{.Type}}
+                                        <a href="{{$baseURL}}:{{.PublicPort}}" target="_blank">{{.PublicPort}}:{{.PrivatePort}}==={{$baseURL}}</a><br>
+                                    {{end}}
+                                {{end}}
+                            </td>
+                            <td>{{.Status}}</td>
+                        </tr>
+                        {{else}}
+                        <tr>
+                            <td colspan="6">No containers found</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -2,104 +2,76 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/gin-gonic/gin"
 )
 
-func main() {
-	// http.HandleFunc("/containers", getContainers)
-	// http.Handle("/", http.FileServer(http.Dir("./static")))
-	// log.Fatal(http.ListenAndServe(":8081", nil))
-	mux := http.NewServeMux()
-	mux.HandleFunc("/containers", getContainers)
-	mux.Handle("/", http.FileServer(http.Dir("./static")))
-	// Wrap the mux with the CORS middleware
-	handler := handleCORS(mux)
-
-	http.ListenAndServe(":8081", handler)
+type ContainerInfo struct {
+	ID     string
+	Names  []string
+	Image  string
+	State  string
+	Ports  []types.Port
+	Status string
 }
 
-// Middleware to handle CORS
-func handleCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+func main() {
+	r := gin.Default()
 
-		// Handle preflight request
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
+	// Load templates from the templates directory
+	r.LoadHTMLGlob("templates/*")
+
+	// Define the handler for the containers page
+	r.GET("/admin/containers", func(c *gin.Context) {
+		containers, err := getDockerContainers()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
-		next.ServeHTTP(w, r)
+		// hostname, err := os.Hostname()
+		// Render the template and pass the list of containers
+		c.HTML(http.StatusOK, "containers.tmpl", gin.H{
+			"Containers": containers,
+			// "Hostname":   hostname,
+		})
 	})
+	r.GET("/", func(c *gin.Context) {
+		c.Redirect(301, "/admin/containers")
+	})
+
+	// Start the server
+	r.Run(":8082")
 }
 
-func getContainers(w http.ResponseWriter, r *http.Request) {
+// getDockerContainers retrieves the list of Docker containers
+func getDockerContainers() ([]ContainerInfo, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		// fmt.Println(" err.Error() +>>>>>", err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	containers, err := cli.ContainerList(context.Background(), container.ListOptions{
 		All: true,
 	})
 	if err != nil {
-		// fmt.Println("+>>>>>", err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		var containerDetails []map[string]interface{}
-		details := map[string]interface{}{
-			"StatusCode": http.StatusInternalServerError,
-			"Message":    "Docker is not UP.",
-		}
-		containerDetails = append(containerDetails, details)
-		jsonResponse, _ := json.Marshal(containerDetails)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonResponse)
-		return
+		return nil, err
 	}
 
-	// Create a slice to hold container details
-	var containerDetails []map[string]interface{}
-
+	var containerInfos []ContainerInfo
 	for _, container := range containers {
-		// Collecting container details in a map
-		ports := []map[string]interface{}{}
-		for _, port := range container.Ports {
-			ports = append(ports, map[string]interface{}{
-				"PrivatePort": port.PrivatePort,
-				"PublicPort":  port.PublicPort,
-			})
-		}
-		details := map[string]interface{}{
-			"ID":         container.ID[:12],
-			"Image":      container.Image,
-			"Names":      container.Names,
-			"Status":     container.Status,
-			"State":      container.State,
-			"Ports":      ports,
-			"Labels":     container.Labels,
-			"Created":    container.Created,
-			"StatusCode": 200,
-			"Message":    "Container List.",
-		}
-		containerDetails = append(containerDetails, details)
+		containerInfos = append(containerInfos, ContainerInfo{
+			ID:     container.ID[:10], // Display only the first 10 characters of the container ID
+			Names:  container.Names,
+			Image:  container.Image,
+			State:  container.State,
+			Ports:  container.Ports,
+			Status: container.Status,
+		})
 	}
 
-	// Convert the container details slice to JSON
-	jsonResponse, err := json.Marshal(containerDetails)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Set content type to application/json and write the responsegit
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResponse)
+	return containerInfos, nil
 }
